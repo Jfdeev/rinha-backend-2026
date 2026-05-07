@@ -1,0 +1,68 @@
+name: rinha-2026
+
+services:
+  api1:
+    build: .
+    container_name: api1
+    hostname: api1
+    networks:
+      - backend
+    environment:
+      - DATA_PATH=/app/data/refs.bin
+    deploy:
+      resources:
+        limits:
+          cpus: "0.45"
+          memory: "140MB"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9999/ready || exit 1"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+      start_period: 30s
+
+  api2:
+    build: .
+    container_name: api2
+    hostname: api2
+    networks:
+      - backend
+    environment:
+      - DATA_PATH=/app/data/refs.bin
+    deploy:
+      resources:
+        limits:
+          cpus: "0.45"
+          memory: "140MB"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9999/ready || exit 1"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+      start_period: 30s
+
+  lb:
+    image: haproxy:2.9-alpine
+    container_name: lb
+    networks:
+      - backend
+    ports:
+      - "9999:9999"
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      api1:
+        condition: service_healthy
+      api2:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.10"
+          memory: "30MB"
+
+networks:
+  backend:
+    driver: bridge
