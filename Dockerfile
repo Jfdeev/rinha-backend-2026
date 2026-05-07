@@ -15,11 +15,13 @@ FROM rust:1.81-slim AS data-prep
 WORKDIR /data-prep
 COPY --from=builder /build/target/release/preprocess /usr/local/bin/preprocess
 
-# references.json.gz must be present in the build context at resources/references.json.gz
-# Run: cp /path/to/rinha-de-backend-2026/resources/references.json.gz resources/
-COPY resources/references.json.gz ./
-
-RUN mkdir -p /app/data && \
+# Download references.json.gz directly from the official rinha repo (cached as a layer).
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/* && \
+    curl -fsSL -o references.json.gz \
+        https://github.com/zanfranceschi/rinha-de-backend-2026/raw/main/resources/references.json.gz && \
+    mkdir -p /app/data && \
     preprocess references.json.gz /app/data/refs.bin && \
     echo "refs.bin size: $(wc -c < /app/data/refs.bin) bytes"
 
